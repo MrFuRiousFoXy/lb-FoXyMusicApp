@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Custom App Template</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="colors.css" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+
+<style>
+    /* Table styles */
+    #savedSongsTable {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    #savedSongsTable th,
+    #savedSongsTable td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+
+    /* Button column */
+    #savedSongsTable th:nth-child(1),
+    #savedSongsTable td:nth-child(1) {
+        width: 25%;
+    }
+
+    /* Title column */
+    #savedSongsTable th:nth-child(2),
+    #savedSongsTable td:nth-child(2) {
+        width: 75%;
+        overflow: hidden;
+        white-space: nowrap; /* Prevent wrapping */
+        text-overflow: ellipsis; /* Add ellipsis for overflow */
+    }
+
+    /* Hover effect */
+    #savedSongsTable tbody tr:hover {
+        background-color: #d90166;
+    }
+</style>
+
+<body>
+    <div id="phone-wrapper">
+        <div class="app">
+            <div id="content">
+                <div class="app-wrapper">
+                    <div id="homepage">
+                        <div class="header">
+                            <img src="assets/Logo.png" width="80%" style="margin: auto;">
+                            <div class="title">Music</div>
+                            <div class="subtitle">Toutes vos musique préférer !</div>
+                        </div>
+                        <div class="button-wrapper">
+                            <input id="youtubeUrl" type="text" style="text-align: center;" placeholder="YouTube URL" />
+                            <button id="playButton" class="button"><ion-icon name="play-outline"></ion-icon>Play</button>
+                            <button id="saveSongButton" class="button">Sauvegarder Musique</button>
+                            <div class="music-controls">
+                                <div class="volume-controls">
+                                    <input type="range" min="0" max="100" value="50" class="slider" id="volumeSlider" step="5">
+                                    <div class="volume-info">50%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="savedSongs-page">
+                        <h1 style="text-align: center;">Sauvegarder Musique</h1>
+                        <table id="savedSongsTable">
+                            <tbody>
+                                <!-- Tracks will be appended here dynamically -->
+                            </tbody>
+                        </table>
+                    </div>              
+                    <div class="navigation-bar" id="navbar">
+                        <a href="#" class="nav-icon" id="home-button"><i class="fa fa-home"></i></a>
+                        <a href="#" class="nav-icon" id="savedSongs-button"><i class="fa fa-music"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>                      
+    </div>
+    <script src="dev.js"></script>
+    <script>
+        const playButton = $('#playButton');
+        const volumeSlider = $('#volumeSlider');
+        const volumeInfo = $('.volume-info');
+        const homepage = $('#homepage');
+        const savedSongs = $('#savedSongs-page');
+    
+        let isPlaying = false;
+    
+        // Function to fetch video title from YouTube API
+        function fetchVideoTitle(videoId) {
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=YOUR_YOUTUBE_API_KEY&part=snippet`,
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.items.length > 0) {
+                            resolve(data.items[0].snippet.title);
+                        } else {
+                            reject("Video not found");
+                        }
+                    },
+                    error: function () {
+                        reject("Error fetching video title");
+                    }
+                });
+            });
+        }
+
+        window.addEventListener("message", (e) => {
+            if (e.data == "componentsLoaded") {
+                fetchNui('getData').then((data) => {
+                    const { youtubeUrl, isPlay, volume } = data;
+                    console.log(JSON.stringify(data));
+                    $('#youtubeUrl').val(youtubeUrl);
+                    if (isPlay) {
+                        playButton.html('<ion-icon name="stop-outline"></ion-icon>Stop');
+                    } else {
+                        playButton.html('<ion-icon name="play-outline"></ion-icon>Play');
+                    }
+                    isPlaying = isPlay;
+                    volumeSlider.val(volume);
+                    volumeInfo.text(`${volume}%`);
+                });
+            }
+        });
+    
+        volumeSlider.on('input', function () {
+            volumeInfo.text(`${volumeSlider.val()}%`);
+        });
+    
+        volumeSlider.on('change', function () {
+            volumeInfo.text(`${volumeSlider.val()}%`);
+            fetchNui('changeVolume', { volume: volumeSlider.val() });
+        });
+    
+        playButton.click(() => {
+            let youtubeUrl = $('#youtubeUrl').val();
+            youtubeUrl = youtubeUrl.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            console.log(isPlaying);
+            if (isPlaying) {
+                playButton.html('<ion-icon name="play-outline"></ion-icon>Play');
+                isPlaying = false;
+                fetchNui('stopSound');
+            } else {
+                if (youtubeUrl.length === 0 || youtubeUrl === '') { return sendNotification({ title: "Veuillez entrer un Lien Valide" }) }
+    
+                if (!youtubeUrl.match(/^(https?\:\/\/)?(www\.youtube\.com|youtu\.?be)\/.+$/)) { return sendNotification({ title: "Veuillez entrer un Lien Valide" }) }
+    
+                playButton.html('<ion-icon name="stop-outline"></ion-icon>Stop');
+                isPlaying = true;
+                fetchNui('playSound', { url: youtubeUrl });
+            }
+        });
+
+        $('#saveSongButton').click(() => {
+            const youtubeUrl = $('#youtubeUrl').val();
+
+            if (youtubeUrl.trim() === '') {
+                sendNotification({ title: "Veuillez entrer un Lien Valide" });
+                return;
+            }
+
+            if (!youtubeUrl.match(/^(https?\:\/\/)?(www\.youtube\.com|youtu\.?be)\/.+$/)) {
+                sendNotification({ title: "Veuillez entrer un Lien Valide" });
+                return;
+            }
+
+            fetchNui('saveSong', { url: youtubeUrl });
+        });
+
+    
+        // Add a new function to handle delete context menu
+        function handleDelete(track) {
+            fetchNui('deleteSong', { trackId: track.url });
+        }
+
+        // Function to handle right-click context menu
+        function handleContextMenu(event, track) {
+            // Prevent the default context menu from showing up
+            event.preventDefault();
+
+            // Show the custom context menu
+            setPopUp({
+                title: "Suppression",
+                description: "Êtes vous sure de Vouloir supprimé ce son ?",
+                buttons: [
+                    {
+                        title: "Retour",
+                        color: "red",
+                        cb: () => {}
+                    },
+                    {
+                        title: "Supprimer",
+                        color: "blue",
+                        cb: () => handleDelete(track)
+                    }
+                ]
+            });
+        }
+
+        // Function to attach right-click event listener to each song row
+        function attachContextMenu(row, track) {
+            row.on('contextmenu', function(event) {
+                handleContextMenu(event, track);
+            });
+        }
+
+        $('#savedSongs-button').click(() => {
+            // Show the playlist page and hide the home content
+            homepage.hide();
+            savedSongs.show();
+
+            fetchNui('getSavedTracks').then(tracks => {
+                const tbody = $('#savedSongsTable tbody');
+                tbody.empty(); // Clear existing rows
+
+                // Append each track as a new row in the table
+                tracks.forEach(track => {
+                    // Extract video ID from the URL
+                    const videoId = track.url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/|[^\/]+\/videos\/|embed\/|v\/|watch\?v=))([^"&?\/\s]{11})/)[1];
+
+                    // Fetch video title and append to table
+                    fetchVideoTitle(videoId).then(title => {
+                        const row = $(`<tr><td>${title}</td></tr>`);
+
+                        // Attach right-click context menu
+                        attachContextMenu(row, track);
+
+                        // Change cursor on hover
+                        row.hover(function() {
+                            $(this).css('cursor', 'pointer');
+                        }, function() {
+                            $(this).css('cursor', 'auto');
+                        });
+
+                        // Save YouTube URL to clipboard on click
+                        row.click(() => {
+                            // Create a temporary textarea element to copy the text
+                            const tempTextarea = $('<textarea>').val(track.url).css({
+                                position: 'absolute',
+                                left: '-9999px',
+                                top: '0',
+                            }).appendTo($('body'));
+
+                            // Select and copy the text
+                            tempTextarea[0].select();
+                            document.execCommand('copy');
+
+                            // Remove the temporary textarea
+                            tempTextarea.remove();
+                            sendNotification({ title: "Lien YouTube Copier" });
+                        });
+
+                        tbody.append(row);
+                    }).catch(error => {
+                        console.error(error);
+                    });
+                });
+            });
+        });
+
+        $('#home-button').click(() => {
+            // Show the home content and hide the playlist page
+            homepage.show();
+            savedSongs.hide();
+        });
+    </script>    
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+
+</html>
